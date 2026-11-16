@@ -4,7 +4,7 @@ import {SEED} from './seed.js';
 'use strict';
 var STATUS=['선금 완','지불 완','추후 지불 필요','추후 추가 발생 가능','미정'];
 var TABS=[['summary','📊','요약'],['spend','💳','집행'],['pending','📝','대기'],['contract','📑','계약']];
-var S={items:[],pending:[],plan:[],hall:[],budget:{income:0,sorin:0,jjinman:0,adjust:0,wedding:'',guests:250,guarantee:200,discountPct:10,mealPrice:58000,mealFull:58000}};
+var S={items:[],pending:[],plan:[],hall:[],budget:{income:0,sorin:0,jjinman:0,adjust:0,wedding:'',guests:250,guarantee:200,discountPct:10,mealPrice:58000,mealFull:58000,mealInclude:false}};
 var db=null,canWrite=true,state='loading',tab='summary',filter='all',cseg='plan',slowTimer=null,raf=0;
 var loaded={};
 
@@ -42,7 +42,8 @@ function shortDate(s){var p=(s||'').split('-');return p.length===3?(+p[1])+'.'+(
 function meal(){
   var b=S.budget,g=num(b.guests),q=num(b.guarantee),over=Math.max(0,g-q),band=Math.floor(q*num(b.discountPct)/100);
   var disc=Math.min(over,band),full=Math.max(0,over-band);
-  return {over:over,disc:disc,full:full,cost:disc*num(b.mealPrice)+full*num(b.mealFull)};
+  var cost=disc*num(b.mealPrice)+full*num(b.mealFull);
+  return {over:over,disc:disc,full:full,cost:cost,inc:!!b.mealInclude,added:b.mealInclude?cost:0};
 }
 var THEME_KEY='wedding-theme',PAL_KEY='wedding-palette';
 var PALETTES=[['rose','로즈','#ac4763'],['lavender','라벤더','#6a58c9'],['sage','세이지','#3f7a5c'],
@@ -73,7 +74,7 @@ function schedule(){if(raf)return;raf=requestAnimationFrame(function(){raf=0;ren
 function calc(){
   var it=S.items,pe=S.pending.filter(function(p){return !p.done}),b=S.budget;
   var fixed=sum(it,spend),wait=sum(pe,function(p){return p.cost});
-  var ml=meal(),total=fixed+wait+ml.cost+num(b.adjust);
+  var ml=meal(),total=fixed+wait+ml.added+num(b.adjust);
   var burden=total-num(b.income),cap=num(b.sorin)+num(b.jjinman);
   return {fixed:fixed,wait:wait,total:total,burden:burden,cap:cap,room:cap-burden,
     paid:sum(it,paid),unpaid:sum(it,unpaid),waitN:pe.length,meal:ml};
@@ -178,7 +179,7 @@ function buildCSV(){
   var c=calc(),b=S.budget;
   return [
     csvRows('[예산 요약]',['구분','금액'],[['예식일',b.wedding||''],['예상 축의비',num(b.income)],['소림 상한비',num(b.sorin)],['찐맨 상한비',num(b.jjinman)],
-      ['확정 집행비',c.fixed],['대기 예상비',c.wait],['추가 식대('+c.meal.over+'명)',c.meal.cost],['기타 보정',num(b.adjust)],['예상 집행비',c.total],['두 사람 순수 부담',c.burden],['상한 대비 여유',c.room]]),
+      ['확정 집행비',c.fixed],['대기 예상비',c.wait],['추가 식대('+c.meal.over+'명'+(c.meal.inc?'':', 미포함')+')',c.meal.added],['기타 보정',num(b.adjust)],['예상 집행비',c.total],['두 사람 순수 부담',c.burden],['상한 대비 여유',c.room]]),
     csvRows('[예산 집행 현황]',['No','구분','항목','상세항목','비용','선금','잔금','지불 단계','잔금 납부일','비고'],
       S.items.map(function(i){return [i.no,i.cat,i.item,i.vendor,spend(i),num(i.deposit),num(i.balance),i.status,i.due||'',i.note]})),
     csvRows('[예산 집행 대기]',['구분','항목','예상 비용','완료','확인 필요사항'],S.pending.map(function(p){return [p.cat,p.item,num(p.cost),p.done?'O':'',p.note]})),
@@ -324,13 +325,23 @@ function editBudget(){
     fields:[{key:'income',label:'예상 축의비',type:'money'},{key:'sorin',label:'소림 상한비',type:'money'},
       {key:'jjinman',label:'찐맨 상한비',type:'money'},
       {key:'adjust',label:'기타 보정 (예상 집행비에 더함)',type:'money',help:'목록에 없는 추가 지출이나 시트와의 차이를 맞출 때 사용해요.'},
-      {key:'wedding',label:'예식일',type:'date'},
+      {key:'wedding',label:'예식일',type:'date'}],
+    onSave:function(o){saveBudget(Object.assign({},S.budget,o))}
+  });
+}
+function editMeal(){
+  if(!canWrite)return;
+  var b=S.budget;
+  openSheet({
+    title:'추가 식대 설정',values:Object.assign({},b,{mealInclude:b.mealInclude?'포함':'포함 안 함'}),
+    fields:[
+      {key:'mealInclude',label:'요약의 예상 집행비에 포함',type:'select',options:['포함 안 함','포함']},
       {key:'guests',label:'예상 하객 수 (식사 인원)',type:'money'},
       {key:'guarantee',label:'보증 인원',type:'money'},
       {key:'discountPct',label:'할인가 적용 범위 (보증 인원의 %)',type:'money',help:'보증 200명·10%면 초과 20명까지 할인가, 그 이상은 정상가예요.'},
-      {key:'mealPrice',label:'1인 식대 (할인가)',type:'money',help:'현재 계약 식대 11,600,000원 ÷ 보증 200명 = 58,000원 기준'},
+      {key:'mealPrice',label:'1인 식대 (할인가)',type:'money',help:'계약 식대 11,600,000원 ÷ 보증 200명 = 58,000원 기준'},
       {key:'mealFull',label:'1인 식대 (정상가)',type:'money',help:'웨딩홀에 정상가를 확인해서 넣어 주세요.'}],
-    onSave:function(o){saveBudget(o)}
+    onSave:function(o){o.mealInclude=o.mealInclude==='포함';saveBudget(Object.assign({},S.budget,o))}
   });
 }
 
@@ -359,7 +370,7 @@ function vSummary(){
       h('span',{class:'pill',text:over?('상한 초과 '+won(-c.room)):('여유 '+won(c.room))}))));
   if(over)v.append(h('div',{class:'banner',text:'두 사람의 상한비를 넘었어요. 초과분은 축의에서 추가로 충당해야 해요.'}));
   v.append(h('div',{class:'grid'},
-    stat('예상 집행비',won(c.total),'확정+대기+추가식대+보정'),stat('예상 축의비',won(S.budget.income)),
+    stat('예상 집행비',won(c.total),c.meal.inc?'확정+대기+추가식대+보정':'확정+대기+보정'),stat('예상 축의비',won(S.budget.income)),
     stat('확정 집행비',won(c.fixed),'집행 탭 비용 합계'),stat('대기 예상비',won(c.wait),'대기 탭 미완료 합계'),
     stat('지불 완료',won(c.paid)),stat('남은 잔금',won(c.unpaid))));
   var ml=c.meal,mealNote=ml.full&&num(S.budget.mealFull)===num(S.budget.mealPrice);
@@ -370,8 +381,8 @@ function vSummary(){
   v.append(h('div',{class:'card'},
     fl('','확정 집행비','집행 탭 비용 합계',won(c.fixed),'',function(){go('spend')}),
     fl('+','대기 예상비','대기 탭 미완료 항목',won(c.wait),'',function(){go('pending')}),
-    fl('+','추가 식대',ml.over>0?('보증 초과 '+ml.over+'명 · 할인가 '+ml.disc+'명'+(ml.full?' + 정상가 '+ml.full+'명':'')):'보증 인원 이내',won(ml.cost),'',editBudget),
-    mealNote?h('div',{class:'note flag',style:'margin:0 0 6px 22px;padding-top:0;border:none',text:'정상가를 아직 할인가와 같게 두었어요. 예산 설정에서 정상가를 넣어 주세요.'}):null,
+    !ml.inc?null:fl('+','추가 식대',ml.over>0?('보증 초과 '+ml.over+'명 · 할인가 '+ml.disc+'명'+(ml.full?' + 정상가 '+ml.full+'명':'')):'보증 인원 이내',won(ml.cost),'',function(){cseg='hall';go('contract')}),
+    ml.inc&&mealNote?h('div',{class:'note flag',style:'margin:0 0 6px 22px;padding-top:0;border:none',text:'정상가를 아직 할인가와 같게 두었어요. 계약 › 웨딩홀에서 정상가를 넣어 주세요.'}):null,
     fl('+','기타 보정','',won(S.budget.adjust),'',editBudget),
     fl('=','예상 집행비','',won(c.total),'sum'),
     fl('−','예상 축의비','',won(S.budget.income)),
@@ -380,8 +391,7 @@ function vSummary(){
   v.append(h('div',{class:'card'},
     sub('예상 축의비',won(S.budget.income)),sub('소림 상한비',won(S.budget.sorin)),
     sub('찐맨 상한비',won(S.budget.jjinman)),sub('기타 보정',won(S.budget.adjust)),
-    sub('예식일',S.budget.wedding?S.budget.wedding.replace(/-/g,'.'):'미입력'),
-    sub('예상 하객 / 보증',num(S.budget.guests)+'명 / '+num(S.budget.guarantee)+'명')));
+    sub('예식일',S.budget.wedding?S.budget.wedding.replace(/-/g,'.'):'미입력')));
   var due=S.items.filter(function(i){return unpaid(i)>0}).slice().sort(function(a,b){
     return (a.due||'9999')<(b.due||'9999')?-1:(a.due||'9999')>(b.due||'9999')?1:num(a.ord)-num(b.ord)});
   v.append(h('h2',null,'남은 잔금 ('+due.length+')',h('button',{text:'집행 보기',onclick:function(){go('spend')}})));
@@ -473,8 +483,15 @@ function vContract(){
     var t=sum(S.hall,function(r){return r.amount});
     var ref=S.items.filter(function(i){return String(i.no)==='2'})[0];
     v.append(h('div',{class:'total'},h('span',{text:'웨딩홀 합계'}),h('span',{text:won(t)})));
-    var ml=meal();
-    if(ml.over>0)v.append(h('div',{class:'banner',text:'예상 하객이 보증보다 '+ml.over+'명 많아 추가 식대 '+won(ml.cost)+'이 예상 집행비에 별도로 더해져요. (요약 › 예산 설정에서 수정)'}));
+    var ml=meal(),B=S.budget;
+    v.append(h('h2',null,'추가 식대 (보증 인원 초과분)',canWrite?h('button',{text:'수정',onclick:editMeal}):null));
+    v.append(h('div',{class:'card item',onclick:editMeal},
+      h('div',{class:'subtot'},h('span',{text:'예상 하객 / 보증 인원'}),h('b',{text:num(B.guests)+'명 / '+num(B.guarantee)+'명'})),
+      h('div',{class:'subtot'},h('span',{text:'할인가 '+ml.disc+'명 × '+won(B.mealPrice)}),h('b',{text:won(ml.disc*num(B.mealPrice))})),
+      h('div',{class:'subtot'},h('span',{text:'정상가 '+ml.full+'명 × '+won(B.mealFull)}),h('b',{text:won(ml.full*num(B.mealFull))})),
+      h('div',{class:'fx sum'},h('span',{class:'fk',text:'추가 식대'}),h('b',{text:won(ml.cost)})),
+      h('div',{class:'note'+(ml.inc?'':' flag'),text:ml.inc?'요약의 예상 집행비에 포함돼 있어요.':'아직 요약의 예상 집행비에 포함하지 않았어요. 수정에서 "포함"으로 바꾸면 반영돼요.'}),
+      ml.full&&num(B.mealFull)===num(B.mealPrice)?h('div',{class:'note flag',style:'border:none;padding-top:0',text:'정상가를 아직 할인가와 같게 두었어요. 웨딩홀에 확인해서 넣어 주세요.'}):null));
     if(ref){
       var diff=t-spend(ref);
       v.append(h('div',{class:'banner',style:diff?'':'background:var(--ok-soft);color:var(--ok)',
@@ -529,7 +546,7 @@ async function boot(){
     db.sub(name,function(rows){S[name]=rows;ready(name)},onErr);
   });
   db.subBudget(function(d){
-    S.budget=Object.assign({income:0,sorin:0,jjinman:0,adjust:0,wedding:'',guests:250,guarantee:200,discountPct:10,mealPrice:58000,mealFull:58000},d||{});ready('budget');
+    S.budget=Object.assign({income:0,sorin:0,jjinman:0,adjust:0,wedding:'',guests:250,guarantee:200,discountPct:10,mealPrice:58000,mealFull:58000,mealInclude:false},d||{});ready('budget');
   },onErr);
 }
 boot();
