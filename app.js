@@ -264,7 +264,7 @@ function payNow(i,e){
   save('items',i.id,d,'').then(function(ok){
     if(ok)toast((i.item||'항목')+' 지불 완료','되돌리기',function(){save('items',i.id,prev,'되돌렸어요')})});
 }
-function payBtn(i){return h('button',{type:'button',class:'paybtn',text:'잔금 지불 완료',onclick:function(e){payNow(i,e)}})}
+function payBtn(i){return h('button',{type:'button',class:'paybtn',text:'지불 완료',onclick:function(e){payNow(i,e)}})}
 function dueLine(i){
   if(!i.due)return null;var n=dday(i.due);
   return h('div',{class:'due'+(n!=null&&n<0?' over':(n!=null&&n<=7?' soon':''))},'납부 '+shortDate(i.due)+' · '+ddLabel(n));
@@ -345,14 +345,23 @@ function vSummary(){
       h('span',{class:'pill',text:over?('상한 초과 '+won(-c.room)):('여유 '+won(c.room))}))));
   if(over)v.append(h('div',{class:'banner',text:'두 사람의 상한비를 넘었어요. 초과분은 축의에서 추가로 충당해야 해요.'}));
   v.append(h('div',{class:'grid'},
-    stat('예상 집행비',won(c.total)),stat('예상 축의비',won(S.budget.income)),
-    stat('확정 집행비',won(c.fixed)),stat('대기 예상비',won(c.wait)),
+    stat('예상 집행비',won(c.total),'확정+대기+추가식대+보정'),stat('예상 축의비',won(S.budget.income)),
+    stat('확정 집행비',won(c.fixed),'집행 탭 비용 합계'),stat('대기 예상비',won(c.wait),'대기 탭 미완료 합계'),
     stat('지불 완료',won(c.paid)),stat('남은 잔금',won(c.unpaid))));
-  if(c.meal.over>0)v.append(h('div',{class:'card item',onclick:editBudget},
-    h('div',{class:'row'},h('div',{class:'l'},h('div',{class:'t',text:'추가 식대 (보증 초과 '+c.meal.over+'명)'}),
-      h('div',{class:'s',text:'할인가 '+c.meal.disc+'명 × '+won(S.budget.mealPrice)+(c.meal.full?' + 정상가 '+c.meal.full+'명 × '+won(S.budget.mealFull):'')})),
-      h('div',{class:'r'},h('div',{class:'amt',text:won(c.meal.cost)}))),
-    num(S.budget.mealFull)===num(S.budget.mealPrice)&&c.meal.full?h('div',{class:'note flag',text:'정상가를 아직 할인가와 같게 두었어요. 웨딩홀에 정상가를 확인해서 예산 설정에 넣어 주세요.'}):null));
+  var ml=c.meal,mealNote=ml.full&&num(S.budget.mealFull)===num(S.budget.mealPrice);
+  function fl(op,k,sub,val,cls,onclick){
+    return h('div',{class:'fx'+(cls?' '+cls:''),onclick:onclick||null},h('span',{class:'op',text:op}),
+      h('span',{class:'fk'},k,sub?h('small',{text:sub}):null),h('b',{text:val}))}
+  v.append(h('h2',null,'예상 집행비 계산'));
+  v.append(h('div',{class:'card'},
+    fl('','확정 집행비','집행 탭 비용 합계',won(c.fixed),'',function(){go('spend')}),
+    fl('+','대기 예상비','대기 탭 미완료 항목',won(c.wait),'',function(){go('pending')}),
+    fl('+','추가 식대',ml.over>0?('보증 초과 '+ml.over+'명 · 할인가 '+ml.disc+'명'+(ml.full?' + 정상가 '+ml.full+'명':'')):'보증 인원 이내',won(ml.cost),'',editBudget),
+    mealNote?h('div',{class:'note flag',style:'margin:0 0 6px 22px;padding-top:0;border:none',text:'정상가를 아직 할인가와 같게 두었어요. 예산 설정에서 정상가를 넣어 주세요.'}):null,
+    fl('+','기타 보정','',won(S.budget.adjust),'',editBudget),
+    fl('=','예상 집행비','',won(c.total),'sum'),
+    fl('−','예상 축의비','',won(S.budget.income)),
+    fl('=','두 사람 순수 부담','',won(c.burden),'sum')));
   v.append(h('h2',null,'예산 설정',canWrite?h('button',{text:'수정',onclick:editBudget}):null));
   v.append(h('div',{class:'card'},
     sub('예상 축의비',won(S.budget.income)),sub('소림 상한비',won(S.budget.sorin)),
@@ -367,8 +376,7 @@ function vSummary(){
     v.append(h('div',{class:'card item',onclick:function(){editItem(i)}},
       h('div',{class:'row'},
         h('div',{class:'l'},h('div',{class:'t'},h('span',{class:'no',text:i.no||''}),i.item||'-'),h('div',{class:'s',text:i.vendor||i.cat||''}),dueLine(i)),
-        h('div',{class:'r'},h('div',{class:'amt',text:won(unpaid(i))}),chipFor(i.status))),
-      canWrite?payBtn(i):null));
+        h('div',{class:'r'},h('div',{class:'amt',text:won(unpaid(i))}),chipFor(i.status),canWrite?payBtn(i):null))));
   });
   var todo=S.pending.filter(function(p){return !p.done}).length;
   var chk=S.items.filter(function(i){return flagged(i.note)}).length+S.plan.filter(function(r){return flagged(r.note)}).length;
@@ -377,7 +385,7 @@ function vSummary(){
     h('div',{class:'stat item',onclick:function(){go('pending')}},h('div',{class:'k',text:'대기 중 항목'}),h('div',{class:'v',text:todo+'개'})),
     h('div',{class:'stat item',onclick:function(){go('contract')}},h('div',{class:'k',text:'확인 필요 메모'}),h('div',{class:'v',text:chk+'개'}))));
   return v;
-  function stat(k,val){return h('div',{class:'stat'},h('div',{class:'k',text:k}),h('div',{class:'v',text:val}))}
+  function stat(k,val,hint){return h('div',{class:'stat'},h('div',{class:'k',text:k}),h('div',{class:'v',text:val}),hint?h('div',{class:'hint',text:hint}):null)}
   function sub(k,val){return h('div',{class:'subtot'},h('span',{text:k}),h('b',{text:val}))}
 }
 
@@ -395,9 +403,9 @@ function vSpend(){
         h('div',{class:'l'},h('div',{class:'t'},h('span',{class:'no',text:i.no||''}),i.item||'-'),
           h('div',{class:'s',text:[i.cat,i.vendor].filter(Boolean).join(' · ')}),unpaid(i)>0?dueLine(i):null),
         h('div',{class:'r'},h('div',{class:'amt',text:spend(i)?won(spend(i)):'-'}),chipFor(i.status),
-          unpaid(i)>0?h('div',{class:'unpaid',text:'잔금 '+won(unpaid(i))}):null)),
-      i.note?h('div',{class:'note'+(flagged(i.note)?' flag':''),text:i.note}):null,
-      unpaid(i)>0&&canWrite?payBtn(i):null);
+          unpaid(i)>0?h('div',{class:'unpaid',text:'잔금 '+won(unpaid(i))}):null,
+          unpaid(i)>0&&canWrite?payBtn(i):null)),
+      i.note?h('div',{class:'note'+(flagged(i.note)?' flag':''),text:i.note}):null);
     v.append(card);});
   return v;
 }
