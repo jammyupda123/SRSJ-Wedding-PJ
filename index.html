@@ -13,7 +13,7 @@
 <link rel="apple-touch-icon" href="icon-192.png">
 <link rel="icon" href="icon-192.png">
 <meta name="color-scheme" content="light dark">
-<script>try{var d=document.documentElement,t=localStorage.getItem("wedding-theme"),p=localStorage.getItem("wedding-palette");if(t==="light"||t==="dark")d.dataset.theme=t;d.dataset.palette=p||"sage"}catch(e){}</script>
+<script>try{var d=document.documentElement,t=localStorage.getItem("wedding-theme"),p=localStorage.getItem("wedding-palette");if(t==="light"||t==="dark"){d.dataset.theme=t;var cs="only "+t;d.style.colorScheme=cs;document.querySelector('meta[name="color-scheme"]').setAttribute("content",cs)}d.dataset.palette=p||"sage"}catch(e){}</script>
 <link rel="stylesheet" href="styles.css">
 </head>
 <body>
