@@ -111,3 +111,7 @@ header>div{min-width:0}
 #toast{display:flex;align-items:center;gap:12px;white-space:nowrap}
 #toast.act{pointer-events:auto}
 #toast .tact{border:none;background:none;color:#9fe0bf;font-weight:800;font-size:13px;padding:2px 0;font-family:inherit}
+
+:root{color-scheme:light dark}
+:root[data-theme="light"]{color-scheme:only light}
+:root[data-theme="dark"]{color-scheme:only dark}
