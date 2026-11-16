@@ -4,11 +4,12 @@
   --warn:#d98a1f;--warn-soft:#fdf0dc;--bad:#d64545;--bad-soft:#fde6e6;--blue:#4a74c9;--blue-soft:#e6eefb;
   --shadow:0 1px 2px rgba(20,50,35,.06),0 4px 14px rgba(20,50,35,.05);
 }
-@media (prefers-color-scheme:dark){
-  :root{--bg:#121715;--card:#1b2420;--ink:#eef4f0;--mute:#9db0a6;--line:#2a3631;
+:root[data-theme="dark"]{--bg:#121715;--card:#1b2420;--ink:#eef4f0;--mute:#9db0a6;--line:#2a3631;
     --accent:#6fc19a;--accent-soft:#1f3329;--on-accent:#0f1f17;--ok:#52c493;--ok-soft:#1d3329;
     --warn:#f0a544;--warn-soft:#3a2d17;--bad:#f06a6a;--bad-soft:#3d2020;--blue:#7da2ee;--blue-soft:#202b42;--shadow:none}
-}
+@media (prefers-color-scheme:dark){:root:not([data-theme]){--bg:#121715;--card:#1b2420;--ink:#eef4f0;--mute:#9db0a6;--line:#2a3631;
+    --accent:#6fc19a;--accent-soft:#1f3329;--on-accent:#0f1f17;--ok:#52c493;--ok-soft:#1d3329;
+    --warn:#f0a544;--warn-soft:#3a2d17;--bad:#f06a6a;--bad-soft:#3d2020;--blue:#7da2ee;--blue-soft:#202b42;--shadow:none}}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{margin:0;background:var(--bg);color:var(--ink);
   font-family:-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Noto Sans KR","Malgun Gothic",system-ui,sans-serif;
@@ -22,7 +23,8 @@ header .sub{font-size:12px;color:var(--mute);margin-top:2px}
 .banner{background:var(--warn-soft);color:var(--warn);border-radius:12px;padding:10px 12px;font-size:13px;margin:6px 0 10px}
 .card{background:var(--card);border-radius:16px;box-shadow:var(--shadow);padding:14px;margin-bottom:10px;border:1px solid var(--line)}
 .hero{background:linear-gradient(135deg,var(--accent),#699780);color:#fff;border:none}
-@media (prefers-color-scheme:dark){.hero{background:linear-gradient(135deg,#2c6249,#3f7a5c)}}
+:root[data-theme="dark"] .hero{background:linear-gradient(135deg,#2c6249,#3f7a5c)}
+@media (prefers-color-scheme:dark){:root:not([data-theme]) .hero{background:linear-gradient(135deg,#2c6249,#3f7a5c)}}
 .hero .lab{font-size:12.5px;opacity:.9}
 .hero .big{font-size:30px;font-weight:800;margin:2px 0 8px;letter-spacing:-.5px}
 .bar{height:8px;border-radius:99px;background:rgba(255,255,255,.3);overflow:hidden}
