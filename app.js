@@ -31,13 +31,26 @@ var unpaid=function(i){return i.status==='지불 완'?0:Math.max(0,spend(i)-paid
 var sum=function(a,f){return a.reduce(function(s,x){return s+num(f(x))},0)};
 var flagged=function(t){return /확인|필요|모색|결정/.test(t||'')};
 function toast(m){var t=$('#toast');t.textContent=m;t.classList.add('show');clearTimeout(toast.t);toast.t=setTimeout(function(){t.classList.remove('show')},2200)}
-var THEME_KEY='wedding-theme';
+var THEME_KEY='wedding-theme',PAL_KEY='wedding-palette';
+var PALETTES=[['rose','로즈','#ac4763'],['lavender','라벤더','#6a58c9'],['sage','세이지','#3f7a5c'],
+  ['sky','스카이','#2d69b6'],['gold','골드','#8b6317'],['bw','블랙&화이트','linear-gradient(135deg,#111 50%,#fff 50%)']];
 function getTheme(){try{return localStorage.getItem(THEME_KEY)||'auto'}catch(e){return 'auto'}}
-function setTheme(t){
-  try{localStorage.setItem(THEME_KEY,t)}catch(e){}
-  if(t==='auto')delete document.documentElement.dataset.theme;else document.documentElement.dataset.theme=t;
-  render();
+function getPalette(){try{var p=localStorage.getItem(PAL_KEY);return PALETTES.some(function(x){return x[0]===p})?p:'sage'}catch(e){return 'sage'}}
+function syncThemeColor(){
+  setTimeout(function(){
+    var m=document.querySelector('meta[name="theme-color"]');
+    if(m)m.setAttribute('content',getComputedStyle(document.documentElement).getPropertyValue('--bg').trim()||'#f5f8f5');
+  },30);
 }
+function applyLook(){
+  var r=document.documentElement,t=getTheme();
+  r.dataset.palette=getPalette();
+  if(t==='auto')delete r.dataset.theme;else r.dataset.theme=t;
+  syncThemeColor();
+}
+function setTheme(t){try{localStorage.setItem(THEME_KEY,t)}catch(e){}applyLook();render()}
+function setPalette(p){try{localStorage.setItem(PAL_KEY,p)}catch(e){}applyLook();render()}
+applyLook();
 function schedule(){if(raf)return;raf=requestAnimationFrame(function(){raf=0;render()})}
 
 /* ---------- data ---------- */
@@ -230,6 +243,10 @@ function vSummary(){
   v.append(h('div',{class:'grid'},
     h('div',{class:'stat item',onclick:function(){go('pending')}},h('div',{class:'k',text:'대기 중 항목'}),h('div',{class:'v',text:todo+'개'})),
     h('div',{class:'stat item',onclick:function(){go('contract')}},h('div',{class:'k',text:'확인 필요 메모'}),h('div',{class:'v',text:chk+'개'}))));
+  v.append(h('h2',null,'화면 색상'));
+  v.append(h('div',{class:'pal'},PALETTES.map(function(x){
+    return h('button',{type:'button','aria-label':x[1],class:getPalette()===x[0]?'on':'',onclick:function(){setPalette(x[0])}},
+      h('i',{style:'background:'+x[2]}),x[1])})));
   v.append(h('h2',null,'화면 모드'));
   v.append(h('div',{class:'seg'},[['auto','자동 (폰 설정)'],['light','라이트'],['dark','다크']].map(function(x){
     return h('button',{class:getTheme()===x[0]?'on':'',text:x[1],onclick:function(){setTheme(x[0])}})})));
