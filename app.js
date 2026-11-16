@@ -59,6 +59,9 @@ function applyLook(){
   var r=document.documentElement,t=getTheme();
   r.dataset.palette=getPalette();
   if(t==='auto')delete r.dataset.theme;else r.dataset.theme=t;
+  var cs=t==='light'?'only light':(t==='dark'?'only dark':'light dark');
+  r.style.colorScheme=cs;
+  var mc=document.querySelector('meta[name="color-scheme"]');if(mc)mc.setAttribute('content',cs);
   syncThemeColor();
 }
 function setTheme(t){try{localStorage.setItem(THEME_KEY,t)}catch(e){}applyLook();render()}
