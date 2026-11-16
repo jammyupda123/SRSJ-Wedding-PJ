@@ -376,7 +376,7 @@ function vSummary(){
     v.append(h('div',{class:'card item',onclick:function(){editItem(i)}},
       h('div',{class:'row'},
         h('div',{class:'l'},h('div',{class:'t'},h('span',{class:'no',text:i.no||''}),i.item||'-'),h('div',{class:'s',text:i.vendor||i.cat||''}),dueLine(i)),
-        h('div',{class:'r'},h('div',{class:'amt',text:won(unpaid(i))}),chipFor(i.status),canWrite?payBtn(i):null))));
+        h('div',{class:'r'},h('div',{class:'amt',text:won(unpaid(i))}),chipFor(i.status)))));
   });
   var todo=S.pending.filter(function(p){return !p.done}).length;
   var chk=S.items.filter(function(i){return flagged(i.note)}).length+S.plan.filter(function(r){return flagged(r.note)}).length;
@@ -403,8 +403,7 @@ function vSpend(){
         h('div',{class:'l'},h('div',{class:'t'},h('span',{class:'no',text:i.no||''}),i.item||'-'),
           h('div',{class:'s',text:[i.cat,i.vendor].filter(Boolean).join(' · ')}),unpaid(i)>0?dueLine(i):null),
         h('div',{class:'r'},h('div',{class:'amt',text:spend(i)?won(spend(i)):'-'}),chipFor(i.status),
-          unpaid(i)>0?h('div',{class:'unpaid',text:'잔금 '+won(unpaid(i))}):null,
-          unpaid(i)>0&&canWrite?payBtn(i):null)),
+          unpaid(i)>0?h('div',{class:'unpaid',text:'잔금 '+won(unpaid(i))}):null)),
       i.note?h('div',{class:'note'+(flagged(i.note)?' flag':''),text:i.note}):null);
     v.append(card);});
   return v;
