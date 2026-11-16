@@ -31,6 +31,13 @@ var unpaid=function(i){return i.status==='지불 완'?0:Math.max(0,spend(i)-paid
 var sum=function(a,f){return a.reduce(function(s,x){return s+num(f(x))},0)};
 var flagged=function(t){return /확인|필요|모색|결정/.test(t||'')};
 function toast(m){var t=$('#toast');t.textContent=m;t.classList.add('show');clearTimeout(toast.t);toast.t=setTimeout(function(){t.classList.remove('show')},2200)}
+var THEME_KEY='wedding-theme';
+function getTheme(){try{return localStorage.getItem(THEME_KEY)||'auto'}catch(e){return 'auto'}}
+function setTheme(t){
+  try{localStorage.setItem(THEME_KEY,t)}catch(e){}
+  if(t==='auto')delete document.documentElement.dataset.theme;else document.documentElement.dataset.theme=t;
+  render();
+}
 function schedule(){if(raf)return;raf=requestAnimationFrame(function(){raf=0;render()})}
 
 /* ---------- data ---------- */
@@ -223,6 +230,9 @@ function vSummary(){
   v.append(h('div',{class:'grid'},
     h('div',{class:'stat item',onclick:function(){go('pending')}},h('div',{class:'k',text:'대기 중 항목'}),h('div',{class:'v',text:todo+'개'})),
     h('div',{class:'stat item',onclick:function(){go('contract')}},h('div',{class:'k',text:'확인 필요 메모'}),h('div',{class:'v',text:chk+'개'}))));
+  v.append(h('h2',null,'화면 모드'));
+  v.append(h('div',{class:'seg'},[['auto','자동 (폰 설정)'],['light','라이트'],['dark','다크']].map(function(x){
+    return h('button',{class:getTheme()===x[0]?'on':'',text:x[1],onclick:function(){setTheme(x[0])}})})));
   return v;
   function stat(k,val){return h('div',{class:'stat'},h('div',{class:'k',text:k}),h('div',{class:'v',text:val}))}
   function sub(k,val){return h('div',{class:'subtot'},h('span',{text:k}),h('b',{text:val}))}
