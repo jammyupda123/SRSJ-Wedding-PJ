@@ -43,9 +43,9 @@ function calc(){
     paid:sum(it,paid),unpaid:sum(it,unpaid),waitN:pe.length};
 }
 async function save(col,id,data,label){
-  if(!db)return toast('저장소에 연결되지 않았어요');
-  try{await db.set(col,id,data);toast(label||'저장됨')}
-  catch(e){toast('저장 실패 ('+((e&&e.code)||'error')+')')}
+  if(!db){toast('저장소에 연결되지 않았어요');return false}
+  try{await db.set(col,id,data);toast(label||'저장됨');return true}
+  catch(e){toast('저장 실패 ('+((e&&e.code)||'error')+')');return false}
 }
 async function remove(col,id){
   if(!db)return;
@@ -106,12 +106,12 @@ function openSheet(cfg){
 }
 
 /* ---------- editors ---------- */
-function editItem(i){
+function editItem(i,preset,after){
   if(!canWrite)return;
-  var isNew=!i,v=i||{no:'',cat:'',item:'',vendor:'',cost:0,deposit:0,balance:0,status:'미정',note:''};
+  var isNew=!i,v=i||preset||{no:'',cat:'',item:'',vendor:'',cost:0,deposit:0,balance:0,status:'미정',note:''};
   var auto=isNew||num(v.balance)===Math.max(0,num(v.cost)-num(v.deposit));
   openSheet({
-    title:isNew?'집행 항목 추가':'집행 항목 수정',values:v,
+    title:preset?'집행으로 옮기기':(isNew?'집행 항목 추가':'집행 항목 수정'),values:v,
     fields:[
       {key:'no',label:'번호 (예: 3-1)'},{key:'cat',label:'구분'},{key:'item',label:'항목'},{key:'vendor',label:'상세항목 / 업체'},
       {key:'cost',label:'비용',type:'money'},{key:'deposit',label:'선금(계약금)',type:'money'},
@@ -123,9 +123,17 @@ function editItem(i){
     },
     onSave:function(o){
       o.ord=isNew?nextOrd('items'):num(v.ord);
-      save('items',isNew?newId('items'):i.id,o)},
+      var id=isNew?newId('items'):i.id;
+      save('items',id,o,preset?null:undefined).then(function(ok){if(ok&&after)after(id)})},
     onDelete:isNew?null:function(){remove('items',i.id)}
   });
+}
+function nextNo(){
+  var m=0;S.items.forEach(function(x){var n=parseInt(x.no,10);if(n>m)m=n});return String(m+1)}
+function moveToSpend(p){
+  editItem(null,{no:nextNo(),cat:p.cat||'',item:p.item||'',vendor:'',cost:num(p.cost),deposit:0,balance:num(p.cost),
+    status:'추후 지불 필요',note:p.note||''},function(id){
+    var d=Object.assign({},p);delete d.id;d.done=true;d.itemId=id;save('pending',p.id,d,'집행으로 옮겼어요')});
 }
 function editPending(p){
   if(!canWrite)return;
@@ -241,6 +249,7 @@ function vPending(){
   S.pending.forEach(function(p){
     var ck=h('div',{class:'check'+(p.done?' on':''),text:p.done?'✓':'',onclick:function(e){
       e.stopPropagation();if(!canWrite)return;
+      if(!p.done){moveToSpend(p);return}
       var d=Object.assign({},p);delete d.id;d.done=!p.done;save('pending',p.id,d,d.done?'완료 처리':'대기로 되돌림')}});
     v.append(h('div',{class:'card item'+(p.done?' done':'')},
       h('div',{class:'row',onclick:function(){editPending(p)}},
