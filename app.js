@@ -61,7 +61,12 @@ function nextOrd(col){return S[col].reduce(function(m,x){return Math.max(m,num(x
 function newId(col){return db.newId(col)}
 
 /* ---------- bottom sheet ---------- */
-function closeSheet(){var w=$('#sheetWrap');w.hidden=true;w.replaceChildren()}
+var sheetOpen=false;
+function closeSheet(fromPop){
+  var w=$('#sheetWrap');w.hidden=true;w.replaceChildren();
+  if(sheetOpen){sheetOpen=false;if(fromPop!==true){try{history.back()}catch(e){}}}
+}
+window.addEventListener('popstate',function(){if(sheetOpen)closeSheet(true)});
 function openSheet(cfg){
   var inputs={},body=h('div',{class:'body'});
   cfg.fields.forEach(function(f){
@@ -95,12 +100,13 @@ function openSheet(cfg){
       cfg.onDelete();closeSheet()});
     btns.append(d);
   }
-  btns.append(h('button',{class:'btn',text:'취소',onclick:closeSheet}),
+  btns.append(h('button',{class:'btn',text:'취소',onclick:function(){closeSheet()}}),
     h('button',{class:'btn pri',text:'저장',onclick:function(){
       var out={};cfg.fields.forEach(function(f){out[f.key]=inputs[f.key].get()});
       cfg.onSave(out);closeSheet()}}));
   var w=$('#sheetWrap');w.replaceChildren(h('div',{class:'sheet'},h('h3',{text:cfg.title}),body,btns));
   w.hidden=false;
+  if(!sheetOpen){try{history.pushState({sheet:1},'')}catch(e){}sheetOpen=true}
   w.onclick=function(e){if(e.target===w)closeSheet()};
   if(cfg.init)cfg.init(inputs);
 }
