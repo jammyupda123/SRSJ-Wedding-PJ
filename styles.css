@@ -124,3 +124,6 @@ header>div{min-width:0}
 .fx b{white-space:nowrap}
 .fx[onclick],.fx.click{cursor:pointer}
 .fx.sum{border-top:1px solid var(--line);margin-top:2px;padding-top:9px;color:var(--accent);font-weight:800}
+
+.combo .combo-txt{margin-top:6px}
+.combo .combo-txt[hidden]{display:none}
