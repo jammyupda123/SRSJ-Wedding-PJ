@@ -118,6 +118,18 @@ function openSheet(cfg){
     }else if(f.type==='select'){
       el=h('select',null,f.options.map(function(o){return h('option',{value:o,text:o})}));
       set=function(v){el.value=v||f.options[0]};get=function(){return el.value};
+    }else if(f.type==='combo'){
+      (function(){
+        var opts=(f.options||[]).filter(function(o,i,arr){return o&&arr.indexOf(o)===i});
+        var sel=h('select',null,h('option',{value:'',text:'선택하세요'}),opts.map(function(o){return h('option',{value:o,text:o})}),
+          h('option',{value:'__custom',text:'✏️ 직접 입력'}));
+        var txt=h('input',{type:'text',autocomplete:'off',placeholder:'직접 입력',class:'combo-txt'});
+        function sync(){txt.hidden=sel.value!=='__custom';if(!txt.hidden)txt.focus()}
+        sel.addEventListener('change',sync);
+        el=h('div',{class:'combo'},sel,txt);
+        set=function(v){v=v||'';if(!v){sel.value='';txt.value=''}else if(opts.indexOf(v)>=0){sel.value=v;txt.value=''}else{sel.value='__custom';txt.value=v}txt.hidden=sel.value!=='__custom'};
+        get=function(){return sel.value==='__custom'?txt.value.trim():sel.value};
+      })();
     }else if(f.type==='date'){
       el=h('input',{type:'date'});set=function(v){el.value=v||''};get=function(){return el.value||''};
     }else if(f.type==='area'){
@@ -293,9 +305,11 @@ function editContract(kind,r){
   if(!canWrite)return;
   var isNew=!r,plan=kind==='plan';
   var v=r||(plan?{cat:'',comp:'',vendor:'',required:0,extra:0,note:''}:{cat:'',comp:'',amount:0,note:''});
-  var fields=plan?[{key:'cat',label:'구분'},{key:'vendor',label:'업체명'},{key:'comp',label:'구성'},
+  var uniq=function(rows,k){return rows.map(function(x){return (x[k]||'').trim()}).filter(function(x,i,arr){return x&&arr.indexOf(x)===i})};
+  var catOpts=uniq(S[kind],'cat'),venOpts=uniq(S.plan,'vendor');
+  var fields=plan?[{key:'cat',label:'구분',type:'combo',options:catOpts},{key:'vendor',label:'업체명',type:'combo',options:venOpts},{key:'comp',label:'구성'},
       {key:'required',label:'필수 금액',type:'money'},{key:'extra',label:'별도 금액 (발생 시)',type:'money'},{key:'note',label:'비고 / 확인 필요',type:'area'}]
-    :[{key:'cat',label:'구분'},{key:'comp',label:'구성'},{key:'amount',label:'금액',type:'money'},{key:'note',label:'특이사항',type:'area'}];
+    :[{key:'cat',label:'구분',type:'combo',options:catOpts},{key:'comp',label:'구성'},{key:'amount',label:'금액',type:'money'},{key:'note',label:'특이사항',type:'area'}];
   openSheet({
     title:(plan?'플래너 계약':'웨딩홀 계약')+(isNew?' 항목 추가':' 항목 수정'),values:v,fields:fields,
     onSave:function(o){o.ord=isNew?nextOrd(kind):num(v.ord);save(kind,isNew?newId(kind):r.id,o)},
