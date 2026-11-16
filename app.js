@@ -131,6 +131,28 @@ function openSheet(cfg){
   if(cfg.init)cfg.init(inputs);
 }
 
+/* ---------- 화면 설정 (우측 상단) ---------- */
+function openLook(){
+  var w=$('#sheetWrap');
+  function build(){
+    var body=h('div',{class:'body'},
+      h('label',{text:'화면 색상'}),
+      h('div',{class:'pal'},PALETTES.map(function(x){
+        return h('button',{type:'button','aria-label':x[1],class:getPalette()===x[0]?'on':'',onclick:function(){setPalette(x[0]);build()}},
+          h('i',{style:'background:'+x[2]}),x[1])})),
+      h('label',{text:'화면 모드'}),
+      h('div',{class:'seg'},[['auto','자동 (폰 설정)'],['light','라이트'],['dark','다크']].map(function(x){
+        return h('button',{type:'button',class:getTheme()===x[0]?'on':'',text:x[1],onclick:function(){setTheme(x[0]);build()}})})),
+      h('div',{class:'help',text:'이 기기에만 저장돼요.'}));
+    w.replaceChildren(h('div',{class:'sheet'},h('h3',{text:'화면 설정'}),body,
+      h('div',{class:'btns'},h('button',{class:'btn pri',text:'닫기',onclick:function(){closeSheet()}}))));
+  }
+  build();w.hidden=false;
+  if(!sheetOpen){try{history.pushState({sheet:1},'')}catch(e){}sheetOpen=true}
+  w.onclick=function(e){if(e.target===w)closeSheet()};
+}
+$('#themeBtn').addEventListener('click',openLook);
+
 /* ---------- editors ---------- */
 function editItem(i,preset,after){
   if(!canWrite)return;
@@ -243,13 +265,6 @@ function vSummary(){
   v.append(h('div',{class:'grid'},
     h('div',{class:'stat item',onclick:function(){go('pending')}},h('div',{class:'k',text:'대기 중 항목'}),h('div',{class:'v',text:todo+'개'})),
     h('div',{class:'stat item',onclick:function(){go('contract')}},h('div',{class:'k',text:'확인 필요 메모'}),h('div',{class:'v',text:chk+'개'}))));
-  v.append(h('h2',null,'화면 색상'));
-  v.append(h('div',{class:'pal'},PALETTES.map(function(x){
-    return h('button',{type:'button','aria-label':x[1],class:getPalette()===x[0]?'on':'',onclick:function(){setPalette(x[0])}},
-      h('i',{style:'background:'+x[2]}),x[1])})));
-  v.append(h('h2',null,'화면 모드'));
-  v.append(h('div',{class:'seg'},[['auto','자동 (폰 설정)'],['light','라이트'],['dark','다크']].map(function(x){
-    return h('button',{class:getTheme()===x[0]?'on':'',text:x[1],onclick:function(){setTheme(x[0])}})})));
   return v;
   function stat(k,val){return h('div',{class:'stat'},h('div',{class:'k',text:k}),h('div',{class:'v',text:val}))}
   function sub(k,val){return h('div',{class:'subtot'},h('span',{text:k}),h('b',{text:val}))}
