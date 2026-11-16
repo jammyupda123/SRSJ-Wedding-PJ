@@ -343,5 +343,14 @@ async function boot(){
   },onErr);
 }
 boot();
-if('serviceWorker' in navigator){window.addEventListener('load',function(){navigator.serviceWorker.register('./sw.js').catch(function(){})})}
+if('serviceWorker' in navigator){
+  var hadSW=!!navigator.serviceWorker.controller;
+  navigator.serviceWorker.addEventListener('controllerchange',function(){if(hadSW)location.reload()});
+  window.addEventListener('load',function(){
+    navigator.serviceWorker.register('./sw.js',{updateViaCache:'none'}).then(function(r){r.update()}).catch(function(){});
+  });
+  document.addEventListener('visibilitychange',function(){
+    if(!document.hidden)navigator.serviceWorker.getRegistration().then(function(r){r&&r.update()}).catch(function(){});
+  });
+}
 })();
