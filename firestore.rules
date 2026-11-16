@@ -1,0 +1,9 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // 로그인(익명)한 기기만 접근. 데이터 주소(coupleCode)를 아는 사람만 찾을 수 있어요.
+    match /couples/{code}/{document=**} {
+      allow read, write: if request.auth != null;
+    }
+  }
+}
